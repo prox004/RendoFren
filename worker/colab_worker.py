@@ -72,7 +72,7 @@ else:
 
 # 3. Download Copper.blend benchmark file if not present
 print_banner("3/4: Configuring Benchmark Environment...")
-copper_fallback_url = "https://github.com/bprot/RendoFren/raw/main/worker/Copper.blend"
+copper_fallback_url = "https://github.com/prox004/RendoFren/raw/main/worker/Copper.blend"
 
 if not COPPER_BLEND_PATH.exists():
     print("Fetching benchmark asset Copper.blend...")
