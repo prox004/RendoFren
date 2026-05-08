@@ -21,8 +21,8 @@
 
 * {
   box-sizing: border-box;
-  margin: 5;
-  padding: 5;
+  margin: 0;
+  padding: 0;
 }
 
 html,
@@ -32,7 +32,7 @@ body,
   background: var(--bg-void);
   color: var(--text-primary);
   font-family: 'Outfit', sans-serif;
-  overflow-x: hidden;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
