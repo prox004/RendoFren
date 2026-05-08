@@ -229,11 +229,37 @@ export default function UploadJob() {
       setResult(res)
 
       // 2. Perform real Base Sepolia on-chain lock transaction
-      const activeWallet = wallets[0]
+      let activeWallet = wallets[0]
+      if (!activeWallet && user?.wallet) {
+        setWeb3Status('Initializing secure Web3 wallet connection...')
+        // Wait up to 3 seconds for wallets hook to synchronize
+        for (let i = 0; i < 6; i++) {
+          await new Promise(r => setTimeout(r, 500))
+          if (wallets && wallets.length > 0) {
+            activeWallet = wallets[0]
+            break
+          }
+        }
+      }
+
       if (activeWallet) {
         setWeb3Status('Connecting wallet & initializing escrow deployment contract...')
         
         try {
+          // Automatic network switch to Base Sepolia (84532) if on another network
+          const currentChainId = activeWallet.chainId
+          const targetChainId = 'eip155:84532'
+          if (currentChainId !== targetChainId && currentChainId !== '84532' && currentChainId !== 84532) {
+            setWeb3Status('Switching wallet network to Base Sepolia (Chain 84532)...')
+            try {
+              await activeWallet.switchChain(84532)
+              // Wait briefly for network switch to complete in provider
+              await new Promise(r => setTimeout(r, 1000))
+            } catch (switchError) {
+              console.warn('Network switch rejected or failed:', switchError)
+            }
+          }
+
           const ethereumProvider = await activeWallet.getEthereumProvider()
           const provider = new ethers.BrowserProvider(ethereumProvider)
           const signer = await provider.getSigner()
@@ -273,6 +299,16 @@ export default function UploadJob() {
           res.txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('')
         }
       } else {
+        // Display an explicit consent dialog instead of silently bypassing
+        const proceedSandbox = window.confirm(
+          "We could not detect an active connected Web3 wallet.\n\nWould you like to deploy this swarm utilizing RendoFren's secure Developer Sandbox Escrow Simulation to process your frames immediately?"
+        )
+        if (!proceedSandbox) {
+          setPhase('error')
+          setUploading(false)
+          return
+        }
+        
         setWeb3Status('No active Privy wallet session found. Activating Sandbox Simulation...')
         await new Promise(r => setTimeout(r, 1500))
         res.txHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('')

@@ -16,7 +16,7 @@ from PyQt6.QtGui import QIcon, QFont, QAction, QColor, QTextCursor, QPalette
 from .config import (
     BACKEND_API_URL, WORKER_ADDRESS, WORKER_PRIVATE_KEY,
     PINATA_API_KEY, PINATA_API_SECRET, PINATA_JWT, POLL_INTERVAL,
-    save_worker_identity, CONFIG_FILE, BLENDER_PATH
+    save_worker_identity, CONFIG_FILE, BLENDER_PATH, FRONTEND_URL
 )
 from .gpu_monitor import GPUMonitor
 from .benchmark import GPUBenchmarker
@@ -505,9 +505,34 @@ class RendoFrenWorkerApp(QMainWindow):
         node_status_bar.addWidget(self.lbl_node_score)
         node_status_bar.addStretch()
         
+        # Open Web Portal Button next to status indicators
+        btn_open_web = QPushButton("OPEN WEB PORTAL")
+        btn_open_web.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_open_web.setStyleSheet("""
+            QPushButton {
+                border: 1px solid #66fcf1;
+                color: #66fcf1;
+                font-weight: bold;
+                font-size: 11px;
+                padding: 6px 15px;
+                border-radius: 6px;
+                background-color: rgba(102, 252, 241, 0.05);
+            }
+            QPushButton:hover {
+                background-color: rgba(102, 252, 241, 0.15);
+                color: #ffffff;
+            }
+        """)
+        btn_open_web.clicked.connect(self.open_web_portal)
+        node_status_bar.addWidget(btn_open_web)
+        
         layout.addLayout(node_status_bar)
         layout.addStretch()
         return widget
+
+    def open_web_portal(self):
+        import webbrowser
+        webbrowser.open(FRONTEND_URL)
         
     def create_card(self, title: str, value: str, grid: QGridLayout, r: int, c: int) -> QLabel:
         frame = QFrame()

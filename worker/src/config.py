@@ -7,21 +7,15 @@ SRC_DIR = Path(__file__).parent.resolve()
 WORKER_DIR = SRC_DIR.parent
 PROJECT_ROOT = WORKER_DIR.parent
 
-# Load .env from worker directory first, then fallback to project root
-env_paths = [
-    WORKER_DIR / ".env",
-    PROJECT_ROOT / ".env"
-]
-
-env_loaded = False
-for path in env_paths:
-    if path.exists():
-        load_dotenv(dotenv_path=path)
-        env_loaded = True
-        break
+# Load root .env as baseline credentials, then overlay worker-specific overrides
+if (PROJECT_ROOT / ".env").exists():
+    load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
+if (WORKER_DIR / ".env").exists():
+    load_dotenv(dotenv_path=WORKER_DIR / ".env", override=True)
 
 # Default configurations
-BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:5000")
+BACKEND_API_URL = os.getenv("BACKEND_API_URL", "https://rendofren.onrender.com")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://rendofren.vercel.app/")
 # For the hackathon demo, we can use a random or hardcoded worker address if not set
 WORKER_ADDRESS = os.getenv("WORKER_ADDRESS", "0x9999999999999999999999999999999999999999")
 WORKER_PRIVATE_KEY = os.getenv("WORKER_PRIVATE_KEY", "")
