@@ -54,6 +54,12 @@ if not BLENDER_DIR.exists():
     if not os.path.exists(blender_tar_name):
         print(f"Downloading {blender_tar_name} (approx 310MB)...")
         print("This runs at high speed on Google/Kaggle backbone...", flush=True)
+        
+        # Bypass Blender Foundation 403 Forbidden blocks by masquerading as a web browser
+        opener = urllib.request.build_opener()
+        opener.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)')]
+        urllib.request.install_opener(opener)
+        
         urllib.request.urlretrieve(blender_url, blender_tar_name)
         print("Download complete!")
     
