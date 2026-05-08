@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -33,8 +34,20 @@ UPSTASH_REDIS_REST_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "")
 BASE_RPC_URL = os.getenv("BASE_RPC_URL", "")
 NETWORK_CHAIN_ID = int(os.getenv("NETWORK_CHAIN_ID", "84532"))
 
-# Blender executable
-BLENDER_PATH = os.getenv("BLENDER_PATH", "blender")
+# Blender executable fallback logic (Portable or System-wide)
+if getattr(sys, 'frozen', False):
+    _portable = Path(sys.executable).parent / "blender" / "blender.exe"
+    if _portable.exists():
+        BLENDER_DEFAULT = str(_portable)
+    else:
+        BLENDER_DEFAULT = "C:/Program Files/Blender Foundation/Blender 4.1/blender.exe"
+else:
+    if (WORKER_DIR / "blender" / "blender.exe").exists():
+        BLENDER_DEFAULT = str(WORKER_DIR / "blender" / "blender.exe")
+    else:
+        BLENDER_DEFAULT = "C:/Program Files/Blender Foundation/Blender 4.1/blender.exe"
+
+BLENDER_PATH = os.getenv("BLENDER_PATH", BLENDER_DEFAULT)
 
 # Performance & Polling config
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "10"))

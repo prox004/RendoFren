@@ -189,8 +189,10 @@ class WorkerBackgroundThread(QThread):
         
         # 1. Register/Authenticate at backend
         if not self.api.register_or_authenticate():
-            self.log("Backend offline or auth challenge failed. Entering simulated loop mode.")
-            self.status_signal.emit("offline / simulated", "")
+            self.log("Authentication Failed: Blocked from joining network. Shutting down daemon...")
+            self.status_signal.emit("offline / unauthenticated", "")
+            self.running = False
+            return
         else:
             self.status_signal.emit("idle", "")
             
@@ -747,6 +749,19 @@ class RendoFrenWorkerApp(QMainWindow):
             self.log_to_console("Render node deactivated successfully.")
             self.stats_timer.start(2500) # resume fast stats
         else:
+            # Enforce API Key requirement prior to activation
+            api_key = self.config_inputs.get("WORKER_API_KEY")
+            api_key_text = api_key.text().strip() if api_key else ""
+            
+            if not api_key_text:
+                QMessageBox.critical(
+                    self, 
+                    "API Key Required", 
+                    "Authentication Required:\n\nYou cannot launch or connect a GPU worker node without a valid RendoFren API Key.\n\nPlease copy your API Key from your profile dashboard under the Web Portal (https://rendofren.vercel.app/) and paste it inside the Config tab."
+                )
+                self.log_to_console("Activation aborted: Missing RendoFren Worker API Key.")
+                return
+
             # Start Node
             self.log_to_console("Activating render node...")
             self.node_status = "idle"
@@ -755,7 +770,7 @@ class RendoFrenWorkerApp(QMainWindow):
             
             # Sync config to API client
             self.api_client.backend_url = BACKEND_API_URL
-            self.api_client.worker_api_key = self.config_inputs["WORKER_API_KEY"].text().strip()
+            self.api_client.worker_api_key = api_key_text
             
             # Run background thread
             self.worker_thread = WorkerBackgroundThread(self.api_client, self.renderer)

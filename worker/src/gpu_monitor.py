@@ -52,12 +52,16 @@ class GPUMonitor:
         cls._has_nvidia_smi = shutil.which("nvidia-smi") is not None
         cls._has_wmic = shutil.which("wmic") is not None and os.name == 'nt'
         creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         
         # 2. Check with nvidia-smi once
         if cls._has_nvidia_smi:
             try:
                 cmd = ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=3, creationflags=creationflags)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=3, creationflags=creationflags, startupinfo=startupinfo)
                 if result.returncode == 0 and result.stdout.strip():
                     parts = [p.strip() for p in result.stdout.split(',')]
                     if len(parts) >= 2:
@@ -72,7 +76,7 @@ class GPUMonitor:
         if cls._has_wmic:
             try:
                 cmd = ["wmic", "path", "win32_VideoController", "get", "name"]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=3, creationflags=creationflags)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=3, creationflags=creationflags, startupinfo=startupinfo)
                 if result.returncode == 0 and result.stdout:
                     lines = [line.strip() for line in result.stdout.split('\n') if line.strip()]
                     if len(lines) > 1:
@@ -111,6 +115,10 @@ class GPUMonitor:
             
         cls._last_query_time = current_time
         creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         
         # 1. Use GPUtil directly if available (Direct dynamic library, no subprocess overhead)
         if GPUTIL_AVAILABLE:
@@ -131,7 +139,7 @@ class GPUMonitor:
         if cls._has_nvidia_smi:
             try:
                 cmd = ["nvidia-smi", "--query-gpu=memory.used,utilization.gpu,temperature.gpu", "--format=csv,noheader,nounits"]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=2, creationflags=creationflags)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=2, creationflags=creationflags, startupinfo=startupinfo)
                 if result.returncode == 0 and result.stdout.strip():
                     parts = [p.strip() for p in result.stdout.split(',')]
                     if len(parts) >= 3:

@@ -161,7 +161,13 @@ class GPUBenchmarker:
         if progress_callback:
             progress_callback("Initializing Copper.blend benchmark environment...", 10)
             
-        copper_blend_path = Path("g:/Project/RendoFren/Copper.blend").resolve()
+        import sys
+        if getattr(sys, 'frozen', False):
+            base_dir = Path(sys._MEIPASS)
+        else:
+            base_dir = Path(__file__).parent.parent
+            
+        copper_blend_path = (base_dir / "Copper.blend").resolve()
         
         # Verify test file exists
         if not copper_blend_path.exists():

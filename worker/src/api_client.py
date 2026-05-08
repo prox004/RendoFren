@@ -81,23 +81,28 @@ class WorkerAPIClient:
         Register this worker with the backend.
         Uses /api/workers/register (HTTP POST).
         """
-        # First, try to fetch account details via API Key if available
-        if self.worker_api_key:
-            try:
-                self.log(f"Fetching account details via API Key...")
-                auth_url = f"{self.backend_url}/api/auth/me"
-                resp = requests.get(auth_url, headers={"x-api-key": self.worker_api_key}, timeout=5)
-                if resp.status_code == 200:
-                    self.account_info = resp.json()
-                    user_addr = self.account_info.get("address")
-                    if user_addr:
-                        self.worker_address = user_addr
-                    self.log(f"Authenticated as: {self.account_info.get('email', 'Unknown User')} ({self.worker_address})")
-                    self.log(f"Status: VIEW-ONLY (API Managed)")
-                else:
-                    self.log(f"API Key authentication failed (HTTP {resp.status_code}). Falling back to local address.")
-            except Exception as e:
-                self.log(f"Error during API Key auth: {e}")
+        # Enforce API Key registration requirement
+        if not self.worker_api_key:
+            self.log("Registration Blocked: RendoFren Worker API Key is missing. Please provide a valid key under Config.")
+            return False
+            
+        try:
+            self.log(f"Fetching account details via API Key...")
+            auth_url = f"{self.backend_url}/api/auth/me"
+            resp = requests.get(auth_url, headers={"x-api-key": self.worker_api_key}, timeout=5)
+            if resp.status_code == 200:
+                self.account_info = resp.json()
+                user_addr = self.account_info.get("address")
+                if user_addr:
+                    self.worker_address = user_addr
+                self.log(f"Authenticated as: {self.account_info.get('email', 'Unknown User')} ({self.worker_address})")
+                self.log(f"Status: VIEW-ONLY (API Managed)")
+            else:
+                self.log(f"API Key authentication failed (HTTP {resp.status_code}). Blocked from joining network.")
+                return False
+        except Exception as e:
+            self.log(f"Error during API Key auth: {e}")
+            return False
 
         url = f"{self.backend_url}/api/workers/register"
         from .gpu_monitor import GPUMonitor
