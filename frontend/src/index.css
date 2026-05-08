@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+}
+
 :root {
   --bg-void: #020408;
   --bg-dark: #05070a;
@@ -19,12 +27,6 @@
   --font-cyber: 'Space Grotesk', sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
 #in-page-channel-node-id {
   display: none !important;
   margin: 0 !important;
@@ -32,7 +34,11 @@
   width: 0 !important;
   height: 0 !important;
   position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
   pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 
 html,
