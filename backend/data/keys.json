@@ -1,0 +1,24 @@
+{
+  "rf_a447d0ab9553445867dc8b9df7b6c8a43bda3748329efc6d": {
+    "userId": "test",
+    "createdAt": "2026-05-08T09:24:04.475Z"
+  },
+  "rf_73222eaf06b2b1e5589c632dcb4fb09d3996f58544a999dd": {
+    "userId": "did:privy:cmowory68030r0cl8djbpdn5p",
+    "address": "0xb5E1554b0dA1247Abf55865E8fba01364bBbF9E9",
+    "email": "devilnarcos310@gmail.com",
+    "createdAt": "2026-05-08T09:24:47.949Z"
+  },
+  "rf_6b421bd69c714f486bffa2c58aed758f5a77f2c50225a26f": {
+    "userId": "did:privy:cmowot8nm017c0djxjmg3xnoa",
+    "address": "0x24705555a3d1d17741d75eFA6173ef8B8b2ed68d",
+    "email": "bhandaryprotyoy@gmail.com",
+    "createdAt": "2026-05-08T09:33:44.396Z"
+  },
+  "rf_f9dd9fa0427c0bf31103605cbccc451cd9eaf6d43c3b3f68": {
+    "userId": "did:privy:cmowot8nm017c0djxjmg3xnoa",
+    "address": "0x24705555a3d1d17741d75eFA6173ef8B8b2ed68d",
+    "email": "bhandaryprotyoy@gmail.com",
+    "createdAt": "2026-05-08T12:29:06.451Z"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "rendofren",
+  "version": "1.0.0",
+  "description": "RendoFren is a decentralized GPU rendering network for Blender and After Effects workflows.",
+  "main": "start_network.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "dotenv": "^17.4.2",
+    "hardhat": "^2.28.6"
+  }
+}

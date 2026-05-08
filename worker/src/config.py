@@ -1,0 +1,97 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Define base paths
+SRC_DIR = Path(__file__).parent.resolve()
+WORKER_DIR = SRC_DIR.parent
+PROJECT_ROOT = WORKER_DIR.parent
+
+# Load .env from worker directory first, then fallback to project root
+env_paths = [
+    WORKER_DIR / ".env",
+    PROJECT_ROOT / ".env"
+]
+
+env_loaded = False
+for path in env_paths:
+    if path.exists():
+        load_dotenv(dotenv_path=path)
+        env_loaded = True
+        break
+
+# Default configurations
+BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:5000")
+# For the hackathon demo, we can use a random or hardcoded worker address if not set
+WORKER_ADDRESS = os.getenv("WORKER_ADDRESS", "0x9999999999999999999999999999999999999999")
+WORKER_PRIVATE_KEY = os.getenv("WORKER_PRIVATE_KEY", "")
+
+# IPFS Pinata Configuration
+PINATA_API_KEY = os.getenv("PINATA_API_KEY", os.getenv("REDIS_API_KEY", ""))
+PINATA_API_SECRET = os.getenv("PINATA_API_SECRET", os.getenv("REDIS_API_SECRET", ""))
+PINATA_JWT = os.getenv("PINATA_JWT", os.getenv("REDIS_JWT", ""))
+
+# Upstash Redis REST
+UPSTASH_REDIS_REST_URL = os.getenv("UPSTASH_REDIS_REST_URL", "")
+UPSTASH_REDIS_REST_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "")
+
+# Blockchain Configuration
+BASE_RPC_URL = os.getenv("BASE_RPC_URL", "")
+NETWORK_CHAIN_ID = int(os.getenv("NETWORK_CHAIN_ID", "84532"))
+
+# Blender executable
+BLENDER_PATH = os.getenv("BLENDER_PATH", "blender")
+
+# Performance & Polling config
+POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "10"))
+USE_PERSISTENT_TEMP = os.getenv("USE_PERSISTENT_TEMP", "true").lower() in ("true", "1", "yes")
+
+# API Authentication
+WORKER_API_KEY = os.getenv("WORKER_API_KEY", "")
+
+# Directories
+TEMP_DIR = WORKER_DIR / "temp"
+TEMP_DIR.mkdir(exist_ok=True)
+
+RENDERS_DIR = WORKER_DIR / "renders"
+RENDERS_DIR.mkdir(exist_ok=True)
+
+# Save configuration file
+CONFIG_FILE = WORKER_DIR / "config_cache.json"
+
+def save_worker_identity(address, private_key):
+    """Save worker keys back to .env for persistence"""
+    env_file = WORKER_DIR / ".env"
+    if not env_file.exists() and (PROJECT_ROOT / ".env").exists():
+        env_file = PROJECT_ROOT / ".env"
+        
+    # Read existing or create new
+    lines = []
+    if env_file.exists():
+        with open(env_file, 'r') as f:
+            lines = f.readlines()
+            
+    # Update or add WORKER_ADDRESS and WORKER_PRIVATE_KEY
+    updated_address = False
+    updated_key = False
+    for i, line in enumerate(lines):
+        if line.startswith("WORKER_ADDRESS="):
+            lines[i] = f'WORKER_ADDRESS="{address}"\n'
+            updated_address = True
+        elif line.startswith("WORKER_PRIVATE_KEY="):
+            lines[i] = f'WORKER_PRIVATE_KEY="{private_key}"\n'
+            updated_key = True
+            
+    if not updated_address:
+        lines.append(f'WORKER_ADDRESS="{address}"\n')
+    if not updated_key:
+        lines.append(f'WORKER_PRIVATE_KEY="{private_key}"\n')
+        
+    with open(env_file, 'w') as f:
+        f.writelines(lines)
+        
+    # Reload environment variables
+    load_dotenv(dotenv_path=env_file, override=True)
+    global WORKER_ADDRESS, WORKER_PRIVATE_KEY
+    WORKER_ADDRESS = address
+    WORKER_PRIVATE_KEY = private_key
