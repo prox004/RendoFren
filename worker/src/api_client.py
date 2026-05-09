@@ -106,12 +106,22 @@ class WorkerAPIClient:
 
         url = f"{self.backend_url}/api/workers/register"
         from .gpu_monitor import GPUMonitor
+        from .benchmark import GPUBenchmarker
+        
         gpu = GPUMonitor.get_gpu_info()
+        gpu_name = gpu.get("name", "Unknown GPU")
+        
+        # Pull official score directly from the offline gpu.json using the hardware string
+        official_score = GPUBenchmarker.calculate_score(elapsed_time=0, gpu_name=gpu_name)
+        if official_score > 0:
+            self._bench_score = official_score
+            self._save_persisted_score(self._bench_score)
+            
         payload = {
             "address": self.worker_address,
-            "gpuName": gpu.get("name", "Unknown GPU"),
+            "gpuName": gpu_name,
             "vram": gpu.get("vram_total", 0),
-            "benchmarkScore": self._bench_score,
+            "benchmarkScore": self._bench_score or 180,
             "status": "idle",
         }
         self.log(f"Registering worker at {url} ...")
