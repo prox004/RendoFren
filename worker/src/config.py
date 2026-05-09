@@ -38,6 +38,7 @@ import platform
 
 # Blender executable fallback logic (Portable, Cloud, or System-wide)
 is_linux = platform.system() == "Linux"
+FORCE_LOCAL_ADDRESS = os.getenv("FORCE_LOCAL_ADDRESS", "false").lower() == "true"
 
 if is_linux:
     # Search both the worker folder and the root project folder for the extracted Blender

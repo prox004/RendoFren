@@ -93,10 +93,11 @@ class WorkerAPIClient:
             if resp.status_code == 200:
                 self.account_info = resp.json()
                 user_addr = self.account_info.get("address")
-                if user_addr:
+                from .config import FORCE_LOCAL_ADDRESS
+                if user_addr and not FORCE_LOCAL_ADDRESS:
                     self.worker_address = user_addr
                 self.log(f"Authenticated as: {self.account_info.get('email', 'Unknown User')} ({self.worker_address})")
-                self.log(f"Status: VIEW-ONLY (API Managed)")
+                self.log(f"Status: {'VIEW-ONLY (API Managed)' if not FORCE_LOCAL_ADDRESS else 'FORCE LOCAL WALLET ACTIVE'}")
             else:
                 self.log(f"API Key authentication failed (HTTP {resp.status_code}). Blocked from joining network.")
                 return False
