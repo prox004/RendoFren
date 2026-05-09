@@ -51,17 +51,20 @@ class GPUMonitor:
         # Setup process creation flags to suppress background console windows on Windows
         cls._has_nvidia_smi = shutil.which("nvidia-smi") is not None
         cls._has_wmic = shutil.which("wmic") is not None and os.name == 'nt'
-        creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-        startupinfo = None
+        
+        # Build safe subprocess kwargs based on OS
+        cls._subp_kwargs = {"capture_output": True, "text": True, "timeout": 3}
         if os.name == 'nt':
+            cls._subp_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            cls._subp_kwargs["startupinfo"] = startupinfo
         
         # 2. Check with nvidia-smi once
         if cls._has_nvidia_smi:
             try:
                 cmd = ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=3, creationflags=creationflags, startupinfo=startupinfo)
+                result = subprocess.run(cmd, **cls._subp_kwargs)
                 if result.returncode == 0 and result.stdout.strip():
                     parts = [p.strip() for p in result.stdout.split(',')]
                     if len(parts) >= 2:
@@ -76,7 +79,7 @@ class GPUMonitor:
         if cls._has_wmic:
             try:
                 cmd = ["wmic", "path", "win32_VideoController", "get", "name"]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=3, creationflags=creationflags, startupinfo=startupinfo)
+                result = subprocess.run(cmd, **cls._subp_kwargs)
                 if result.returncode == 0 and result.stdout:
                     lines = [line.strip() for line in result.stdout.split('\n') if line.strip()]
                     if len(lines) > 1:
@@ -135,11 +138,11 @@ class GPUMonitor:
             except Exception:
                 pass
                 
-        # 2. Use nvidia-smi CLI fallback (Suppress popups using CREATE_NO_WINDOW)
+        # 2. Use nvidia-smi CLI fallback
         if cls._has_nvidia_smi:
             try:
                 cmd = ["nvidia-smi", "--query-gpu=memory.used,utilization.gpu,temperature.gpu", "--format=csv,noheader,nounits"]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=2, creationflags=creationflags, startupinfo=startupinfo)
+                result = subprocess.run(cmd, **cls._subp_kwargs)
                 if result.returncode == 0 and result.stdout.strip():
                     parts = [p.strip() for p in result.stdout.split(',')]
                     if len(parts) >= 3:
