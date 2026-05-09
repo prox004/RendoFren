@@ -21,6 +21,46 @@ class Dispatcher {
   }
 
   /**
+   * Helper to download a CID from IPFS with gateway fallback and retry mechanisms.
+   */
+  async _downloadFromIpfs(cid, timeoutMs = 90000) {
+    const gateways = [
+      `https://gateway.pinata.cloud/ipfs/${cid}`,
+      `https://ipfs.io/ipfs/${cid}`,
+      `https://cloudflare-ipfs.com/ipfs/${cid}`,
+      `https://dweb.link/ipfs/${cid}`
+    ];
+
+    let lastError = null;
+    for (const url of gateways) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          logger.info(`[Dispatcher] IPFS Download attempt ${attempt} for CID ${cid} via: ${url}`);
+          const response = await axios({
+            method: 'get',
+            url: url,
+            responseType: 'arraybuffer',
+            timeout: timeoutMs,
+            headers: {
+              'Accept': '*/*'
+            }
+          });
+          if (response.status === 200 && response.data) {
+            logger.info(`[Dispatcher] IPFS Download successful for CID ${cid} via gateway: ${url}`);
+            return response.data;
+          }
+        } catch (err) {
+          lastError = err;
+          logger.warn(`[Dispatcher] IPFS Download attempt ${attempt} failed for CID ${cid} via ${url}: ${err.message}`);
+          // Wait slightly before retrying the same gateway
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+    throw new Error(`IPFS download failed for CID ${cid} after trying multiple gateways and retries. Last error: ${lastError ? lastError.message : 'Unknown'}`);
+  }
+
+  /**
    * Start the dispatch polling loop (every 5 seconds)
    */
   start() {
@@ -433,16 +473,10 @@ class Dispatcher {
           logger.info(`[Dispatcher] Segment ${i} found in local cache: ${cachedPath}`);
           fs.copyFileSync(cachedPath, segmentZipEncPath);
         } else {
-          // Download from IPFS Gateway
+          // Download from IPFS Gateway with robust fallback
           logger.info(`[Dispatcher] Downloading segment ${i} (CID ${cid}) from IPFS...`);
-          const gatewayUrl = pinata.getGatewayUrl(cid);
-          const response = await axios({
-            method: 'get',
-            url: gatewayUrl,
-            responseType: 'arraybuffer',
-            timeout: 60000
-          });
-          fs.writeFileSync(segmentZipEncPath, response.data);
+          const buffer = await this._downloadFromIpfs(cid, 90000);
+          fs.writeFileSync(segmentZipEncPath, buffer);
         }
 
         // Decrypt segment
