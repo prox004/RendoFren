@@ -1,0 +1,10 @@
+node_modules/
+jspm_packages/
+web_modules/
+data.json
+data.json.bak
+logs/
+uploads/
+renders/
+exports/
+.env

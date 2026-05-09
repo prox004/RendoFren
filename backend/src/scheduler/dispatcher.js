@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const AdmZip = require('adm-zip');
-const archiver = require('archiver');
+const { ZipArchive } = require('archiver');
 const config = require('../config');
 const pinata = require('../ipfs/pinata');
 const EncryptionManager = require('../encryption/manager');
@@ -287,6 +287,11 @@ class Dispatcher {
     if (job.parentJobId) {
       const parentJob = JobStore.getJob(job.parentJobId);
       if (parentJob) {
+        if (parentJob.status === 'assembling' || parentJob.status === 'done' || parentJob.status === 'failed') {
+          logger.warn(`[Dispatcher] Parent Job ${parentJob.id} is already in state: ${parentJob.status}. Skipping duplicate assembly trigger.`);
+          return;
+        }
+
         // Mark the virtual child job as done
         JobStore.markDone(jobId, resultCid);
 
@@ -505,7 +510,7 @@ class Dispatcher {
       
       await new Promise((resolve, reject) => {
         const output = fs.createWriteStream(masterDecryptedZipPath);
-        const archive = archiver('zip', { zlib: { level: 9 } });
+        const archive = new ZipArchive({ zlib: { level: 9 } });
 
         output.on('close', resolve);
         archive.on('error', reject);

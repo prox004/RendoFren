@@ -46,7 +46,11 @@ function JobCard({ job }) {
     setDecryptError(null)
     try {
       const url = `${BACKEND_URL}/api/jobs/download/${job.resultCid}`
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      })
       if (!response.ok) throw new Error(`Download failed (${response.status})`)
       const fileData = await response.arrayBuffer()
       
@@ -96,7 +100,11 @@ function JobCard({ job }) {
     setDecrypted(false)
     try {
       const url = `${BACKEND_URL}/api/jobs/download/${job.resultCid}`
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      })
       if (!response.ok) throw new Error(`Download failed (${response.status})`)
       const fileData = await response.arrayBuffer()
       const iv = fileData.slice(0, 16)
@@ -401,9 +409,7 @@ export default function Jobs() {
     )
   }
 
-  const userJobs = jobs.filter(j => 
-    walletAddress && j.creatorWallet?.toLowerCase() === walletAddress.toLowerCase() && !j.parentJobId
-  )
+  const userJobs = jobs.filter(j => !j.parentJobId)
 
   return (
     <div className="flex flex-col h-full bg-slate-950 relative">

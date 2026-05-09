@@ -155,6 +155,13 @@ router.post('/:id/confirm-escrow', async (req, res) => {
     txHash: txHash
   });
 
+  // Broadcast the updated jobs list & network stats to all socket clients immediately
+  const io = req.app.get('io');
+  if (io) {
+    io.emit('jobs:list', JobStore.getAllJobs().slice(0, 20));
+    io.emit('network:stats', JobStore.getNetworkStats());
+  }
+
   // Lock on-chain Escrow (logging in backend database logs)
   try {
     const BlockchainManager = require('../blockchain/blockchain');

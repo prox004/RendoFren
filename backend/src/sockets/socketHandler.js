@@ -31,6 +31,7 @@ function initSocketHandler(io, dispatcher) {
         if (worker) {
           // Broadcast updated worker list to frontend
           io.emit('network:stats', JobStore.getNetworkStats());
+          io.emit('workers:list', JobStore.getAllWorkers());
 
           // If worker is idle, run the dispatcher instantly to assign any pending jobs!
           if (worker.status === 'idle') {
@@ -66,6 +67,7 @@ function initSocketHandler(io, dispatcher) {
           status: 'idle',
         });
         io.emit('network:stats', JobStore.getNetworkStats());
+        io.emit('workers:list', JobStore.getAllWorkers());
         socket.emit('worker:registered', { success: true, address: info.address || address });
 
         // Trigger dispatcher immediately to assign any pending jobs
@@ -80,6 +82,7 @@ function initSocketHandler(io, dispatcher) {
     if (role === 'client') {
       // Client requests current network stats on connect
       socket.emit('network:stats', JobStore.getNetworkStats());
+      socket.emit('workers:list', JobStore.getAllWorkers());
       socket.emit('jobs:list', JobStore.getAllJobs().slice(0, 20));
     }
 
@@ -90,6 +93,7 @@ function initSocketHandler(io, dispatcher) {
         if (worker) {
           JobStore.updateWorkerHeartbeat(address, { status: 'offline' });
           io.emit('network:stats', JobStore.getNetworkStats());
+          io.emit('workers:list', JobStore.getAllWorkers());
         }
       }
     });
