@@ -47,9 +47,8 @@ if not BLENDER_DIR.exists():
         urllib.request.urlretrieve(blender_url, blender_tar_name)
         print("Download complete!")
     
-    print("Extracting Blender tarball (this takes about 10-15 seconds)...", flush=True)
-    with tarfile.open(blender_tar_name, "r:xz") as tar:
-        tar.extractall(path=BASE_DIR)
+    print("Extracting Blender tarball using high-speed native OS tools...", flush=True)
+    subprocess.run(["tar", "-xf", blender_tar_name, "-C", str(BASE_DIR)])
         
     try:
         os.remove(blender_tar_name)
