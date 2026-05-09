@@ -2,6 +2,7 @@
 node_modules/
 jspm_packages/
 web_modules/
+backend/data.json
 
 # Python Virtual Environments
 venv/
@@ -60,3 +61,4 @@ renders/
 output/
 *.blend1
 *.blend2
+backend/data.json
