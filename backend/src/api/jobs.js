@@ -68,6 +68,12 @@ router.post('/:id/claim', (req, res) => {
   if (job.status !== 'pending' && job.status !== 'queued') {
     return res.status(409).json({ error: `Job is not claimable (status: ${job.status})` });
   }
+  
+  // Anti-Poaching Guard: If the dispatcher specifically assigned this job to a node,
+  // do not let a different node steal it via HTTP polling.
+  if (job.assignedWorker && job.assignedWorker !== workerAddress && job.assignedWorker !== 'Swarm Network') {
+    return res.status(403).json({ error: `Job is explicitly reserved for worker ${job.assignedWorker}` });
+  }
 
   JobStore.markRendering(req.params.id, workerAddress);
   logger.info(`[Jobs] Job ${req.params.id} claimed by worker ${workerAddress}`);
