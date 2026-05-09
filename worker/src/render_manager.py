@@ -60,8 +60,12 @@ class RenderManager:
         script_path = os.path.join(script_dir, "gpu_setup.py")
         script_content = """\
 import bpy
+import addon_utils
 
 def activate_gpu():
+    # 1. Force enable Cycles addon in background mode
+    addon_utils.enable("cycles", default_set=True)
+    
     prefs = bpy.context.preferences
     addon = prefs.addons.get('cycles')
     if not addon:
@@ -69,14 +73,8 @@ def activate_gpu():
         return
 
     cprefs = addon.preferences
-
-    # Step 1: Call get_devices() BEFORE changing compute_device_type.
-    # This is required by Blender 3.x/4.x to seed the initial device list.
     cprefs.get_devices()
 
-    # Step 2: Dynamically assign OptiX to supported architectures.
-    # OPTIX is RTX-only. Initialising it in background mode on older GTX GPUs
-    # causes a hard C++ crash inside Blender that kills the process.
     is_optix = False
     for d in cprefs.devices:
         name = d.name.upper()
@@ -84,23 +82,23 @@ def activate_gpu():
             is_optix = True
             break
             
-    device_order = ('OPTIX', 'CUDA', 'HIP', 'METAL', 'ONEAPI') if is_optix else ('CUDA', 'OPTIX', 'HIP', 'METAL', 'ONEAPI')
+    device_order = ('OPTIX', 'CUDA') if is_optix else ('CUDA', 'OPTIX')
 
     activated = False
     for device_type in device_order:
         try:
             cprefs.compute_device_type = device_type
-            # Step 3: Must call get_devices() again AFTER setting the type.
-            # This populates the device list for the chosen backend.
             cprefs.get_devices()
             gpu_devices = [d for d in cprefs.devices if d.type != 'CPU']
             if gpu_devices:
                 for d in cprefs.devices:
                     d.use = (d.type != 'CPU')
-                # Guard: bpy.context.scene can be None in background mode.
-                scene = bpy.context.scene
-                if scene and hasattr(scene, 'cycles'):
-                    scene.cycles.device = 'GPU'
+                
+                # 2. Force ALL scenes to use GPU (bypasses NoneType context bugs)
+                for scene in bpy.data.scenes:
+                    if hasattr(scene, 'cycles'):
+                        scene.cycles.device = 'GPU'
+                        
                 print(f'[RendoFren] GPU_ACCEL_SUCCESS via {device_type}: {[d.name for d in gpu_devices]}')
                 activated = True
                 break
