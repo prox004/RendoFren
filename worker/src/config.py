@@ -34,18 +34,30 @@ UPSTASH_REDIS_REST_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "")
 BASE_RPC_URL = os.getenv("BASE_RPC_URL", "")
 NETWORK_CHAIN_ID = int(os.getenv("NETWORK_CHAIN_ID", "84532"))
 
-# Blender executable fallback logic (Portable or System-wide)
-if getattr(sys, 'frozen', False):
-    _portable = Path(sys.executable).parent / "blender" / "blender.exe"
-    if _portable.exists():
-        BLENDER_DEFAULT = str(_portable)
+import platform
+
+# Blender executable fallback logic (Portable, Cloud, or System-wide)
+is_linux = platform.system() == "Linux"
+
+if is_linux:
+    linux_blender_path = WORKER_DIR / "blender-4.1.0-linux-x64" / "blender"
+    if linux_blender_path.exists():
+        BLENDER_DEFAULT = str(linux_blender_path)
     else:
-        BLENDER_DEFAULT = "C:/Program Files/Blender Foundation/Blender 4.1/blender.exe"
+        # Fallback to system-level blender if running locally on Linux without the package
+        BLENDER_DEFAULT = "blender"
 else:
-    if (WORKER_DIR / "blender" / "blender.exe").exists():
-        BLENDER_DEFAULT = str(WORKER_DIR / "blender" / "blender.exe")
+    if getattr(sys, 'frozen', False):
+        _portable = Path(sys.executable).parent / "blender" / "blender.exe"
+        if _portable.exists():
+            BLENDER_DEFAULT = str(_portable)
+        else:
+            BLENDER_DEFAULT = "C:/Program Files/Blender Foundation/Blender 4.1/blender.exe"
     else:
-        BLENDER_DEFAULT = "C:/Program Files/Blender Foundation/Blender 4.1/blender.exe"
+        if (WORKER_DIR / "blender" / "blender.exe").exists():
+            BLENDER_DEFAULT = str(WORKER_DIR / "blender" / "blender.exe")
+        else:
+            BLENDER_DEFAULT = "C:/Program Files/Blender Foundation/Blender 4.1/blender.exe"
 
 BLENDER_PATH = os.getenv("BLENDER_PATH", BLENDER_DEFAULT)
 
