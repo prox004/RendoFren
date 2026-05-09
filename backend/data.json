@@ -211,7 +211,7 @@
         "currentJobId": "0b5773e2-3386-43b8-ba00-f5618aa2b228",
         "completedJobs": 0,
         "totalEarnings": 0,
-        "lastSeen": "2026-05-09T07:37:02.800Z",
+        "lastSeen": "2026-05-09T07:37:12.870Z",
         "registeredAt": "2026-05-08T09:25:10.689Z",
         "usage": 0,
         "temperature": 24
@@ -243,10 +243,10 @@
         "currentJobId": null,
         "completedJobs": 0,
         "totalEarnings": 0,
-        "lastSeen": "2026-05-09T07:37:01.287Z",
+        "lastSeen": "2026-05-09T07:37:21.090Z",
         "registeredAt": "2026-05-08T18:23:27.996Z",
-        "usage": 0.03705559455446428,
-        "temperature": 57.89063034044035
+        "usage": 17.602892237327843,
+        "temperature": 56.139270880394655
       }
     ]
   ]
