@@ -226,10 +226,17 @@ def activate_gpu():
     # Must call BEFORE setting compute_device_type, otherwise device list is empty.
     cprefs.get_devices()
 
-    # Step 2: Try CUDA first (works on all Nvidia including GTX 900/1000 series).
-    # OPTIX is tried second — it is RTX-only and causes a hard C++ crash on older GPUs
-    # when initialized in background mode, which kills Blender before any render starts.
-    for device_type in ('CUDA', 'OPTIX', 'HIP', 'METAL', 'ONEAPI'):
+    # Step 2: Dynamically assign OptiX to supported architectures.
+    is_optix = False
+    for d in cprefs.devices:
+        name = d.name.upper()
+        if any(x in name for x in ["RTX", "T4", "L4", "A10", "V100", "H100"]):
+            is_optix = True
+            break
+            
+    device_order = ('OPTIX', 'CUDA', 'HIP', 'METAL', 'ONEAPI') if is_optix else ('CUDA', 'OPTIX', 'HIP', 'METAL', 'ONEAPI')
+
+    for device_type in device_order:
         try:
             cprefs.compute_device_type = device_type
             # Step 3: Must call get_devices() again AFTER setting the type to populate list.

@@ -17,6 +17,9 @@ const STATUS_STYLES = {
 }
 
 function JobCard({ job }) {
+  const { jobs } = useStore()
+  const childSegments = jobs.filter(j => j.parentJobId === job.id)
+
   const progress = job.progress || 0
   const frames = job.endFrame - job.startFrame + 1
 
@@ -187,6 +190,36 @@ function JobCard({ job }) {
           {copied ? 'COPIED!' : 'COPY CIPHER'}
         </button>
       </div>
+
+      {/* Segmented Child Jobs UI */}
+      {childSegments.length > 0 && (
+        <div className="flex flex-col gap-2 mt-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-[1px] flex-1 bg-slate-800/50"></div>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest font-cyber">Distributed Segments ({childSegments.length})</span>
+            <div className="h-[1px] flex-1 bg-slate-800/50"></div>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            {childSegments.map((seg) => (
+              <div key={seg.id} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/40 border border-slate-900/60 text-xs hover:border-[var(--neon-cyan)]/30 transition-all duration-300">
+                <div className="flex items-center gap-3">
+                  <div className={`w-1.5 h-1.5 rounded-full ${seg.status === 'done' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : seg.status === 'failed' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : seg.status === 'rendering' ? 'bg-[var(--neon-cyan)] shadow-[0_0_8px_rgba(0,245,196,0.6)] animate-pulse' : 'bg-slate-600'}`}></div>
+                  <div className="flex flex-col">
+                    <span className="text-slate-300 font-bold mono">Frames {seg.startFrame}-{seg.endFrame}</span>
+                    <span className="text-[9px] text-slate-500 font-cyber">NODE: {seg.assignedWorker ? `${seg.assignedWorker.slice(0,10)}...` : 'PENDING'}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className={`text-[9px] font-bold uppercase tracking-widest ${STATUS_STYLES[seg.status] || 'text-slate-400'} px-2 py-0.5 rounded border bg-opacity-10`}>{seg.status}</span>
+                  {['rendering', 'assembling'].includes(seg.status) && (
+                    <span className="text-[10px] text-[var(--neon-cyan)] font-bold mono mt-1">{seg.progress || 0}%</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Decrypted Frame Viewer */}
       {previewActive && frameImages.length > 0 && (
@@ -369,7 +402,7 @@ export default function Jobs() {
   }
 
   const userJobs = jobs.filter(j => 
-    walletAddress && j.creatorWallet?.toLowerCase() === walletAddress.toLowerCase()
+    walletAddress && j.creatorWallet?.toLowerCase() === walletAddress.toLowerCase() && !j.parentJobId
   )
 
   return (
