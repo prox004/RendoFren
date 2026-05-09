@@ -61,6 +61,10 @@ else:
 
 BLENDER_PATH = os.getenv("BLENDER_PATH", BLENDER_DEFAULT)
 
+# Safety check: If .env was copied from a Windows machine to Linux, actively ignore the C:/ drive path
+if is_linux and (BLENDER_PATH.startswith("C:") or BLENDER_PATH.startswith("D:")):
+    BLENDER_PATH = BLENDER_DEFAULT
+
 # Performance & Polling config
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "10"))
 USE_PERSISTENT_TEMP = os.getenv("USE_PERSISTENT_TEMP", "true").lower() in ("true", "1", "yes")
