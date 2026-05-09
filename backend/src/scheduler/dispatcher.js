@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const AdmZip = require('adm-zip');
+const archiver = require('archiver');
 const config = require('../config');
 const pinata = require('../ipfs/pinata');
 const EncryptionManager = require('../encryption/manager');
@@ -23,7 +24,7 @@ class Dispatcher {
   /**
    * Helper to download a CID from IPFS with gateway fallback and retry mechanisms.
    */
-  async _downloadFromIpfs(cid, timeoutMs = 90000) {
+  async _downloadFromIpfs(cid, outputPath, timeoutMs = 90000) {
     const gateways = [
       `https://gateway.pinata.cloud/ipfs/${cid}`,
       `https://ipfs.io/ipfs/${cid}`,
@@ -39,15 +40,22 @@ class Dispatcher {
           const response = await axios({
             method: 'get',
             url: url,
-            responseType: 'arraybuffer',
+            responseType: 'stream',
             timeout: timeoutMs,
             headers: {
               'Accept': '*/*'
             }
           });
+          
           if (response.status === 200 && response.data) {
             logger.info(`[Dispatcher] IPFS Download successful for CID ${cid} via gateway: ${url}`);
-            return response.data;
+            
+            return new Promise((resolve, reject) => {
+              const writer = fs.createWriteStream(outputPath);
+              response.data.pipe(writer);
+              writer.on('finish', resolve);
+              writer.on('error', reject);
+            });
           }
         } catch (err) {
           lastError = err;
@@ -472,10 +480,9 @@ class Dispatcher {
           logger.info(`[Dispatcher] Segment ${i} found in local cache: ${cachedPath}`);
           fs.copyFileSync(cachedPath, segmentZipEncPath);
         } else {
-          // Download from IPFS Gateway with robust fallback
+          // Download from IPFS Gateway with robust fallback directly to stream to prevent memory exhaustion
           logger.info(`[Dispatcher] Downloading segment ${i} (CID ${cid}) from IPFS...`);
-          const buffer = await this._downloadFromIpfs(cid, 90000);
-          fs.writeFileSync(segmentZipEncPath, buffer);
+          await this._downloadFromIpfs(cid, segmentZipEncPath, 90000);
         }
 
         // Decrypt segment
@@ -493,25 +500,37 @@ class Dispatcher {
         const zip = new AdmZip(segmentZipDecPath);
         zip.extractAllTo(segmentFramesFolder, true);
 
-        // Collect all extracted png files for this segment
-        const files = fs.readdirSync(segmentFramesFolder).filter(f => f.toLowerCase().endsWith('.png') || f.toLowerCase().endsWith('.jpg') || f.toLowerCase().endsWith('.jpeg'));
-        
-        for (const f of files) {
-          totalExtractedFiles++;
-          // Ensure uniqueness by prefixing the filename with segment index
-          const uniqueName = `seg_${i}_${f}`;
-          masterZip.addLocalFile(path.join(segmentFramesFolder, f), "", uniqueName);
+      const masterDecryptedZipPath = path.join(tempDir, 'master_decrypted.zip');
+      
+      await new Promise((resolve, reject) => {
+        const output = fs.createWriteStream(masterDecryptedZipPath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+
+        output.on('close', resolve);
+        archive.on('error', reject);
+
+        archive.pipe(output);
+
+        for (let i = 0; i < segments.length; i++) {
+          const segmentFramesFolder = path.join(tempDir, `frames_seg_${i}`);
+          if (fs.existsSync(segmentFramesFolder)) {
+            const files = fs.readdirSync(segmentFramesFolder).filter(f => f.toLowerCase().endsWith('.png') || f.toLowerCase().endsWith('.jpg') || f.toLowerCase().endsWith('.jpeg'));
+            for (const f of files) {
+              totalExtractedFiles++;
+              const uniqueName = `seg_${i}_${f}`;
+              archive.file(path.join(segmentFramesFolder, f), { name: uniqueName });
+            }
+          }
         }
-      }
+        
+        archive.finalize();
+      });
 
       if (totalExtractedFiles === 0) {
         throw new Error('No frame images found in decrypted segments!');
       }
 
-      logger.info(`[Dispatcher] Successfully unzipped ${totalExtractedFiles} frames total. Packing master zip...`);
-      
-      const masterDecryptedZipPath = path.join(tempDir, 'master_decrypted.zip');
-      masterZip.writeZip(masterDecryptedZipPath);
+      logger.info(`[Dispatcher] Successfully unzipped ${totalExtractedFiles} frames total. Packing master zip stream complete.`);
 
       // Encrypt master zip
       const masterEncryptedZipPath = path.join(config.RENDERS_DIR, `results_${parentJob.id}.zip.enc`);

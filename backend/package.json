@@ -20,6 +20,7 @@
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "adm-zip": "^0.5.17",
+    "archiver": "^8.0.0",
     "axios": "^1.9.0",
     "bullmq": "^5.51.1",
     "cors": "^2.8.5",
