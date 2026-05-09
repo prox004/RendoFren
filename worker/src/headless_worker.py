@@ -82,6 +82,18 @@ class HeadlessWorker:
         self.log("=" * 60)
         self.log(f"Backend API URL: {BACKEND_API_URL}")
         self.log(f"Worker Address: {WORKER_ADDRESS}")
+        
+        # 1. Pre-flight verification of Blender installation
+        from src.benchmark import GPUBenchmarker
+        from src.config import BLENDER_PATH
+        self.log(f"Verifying Blender installation at: {BLENDER_PATH} ...")
+        if GPUBenchmarker.check_blender():
+            self.log("[OK] Blender installation check passed successfully!")
+        else:
+            self.log(f"[CRITICAL] Blender check FAILED! The executable was not found or is not runnable at: {BLENDER_PATH}")
+            self.log("Please make sure you ran 'colab_setup.py' to download and configure the local Blender engine.")
+            self.running = False
+            return
 
         # 1. Query local GPU capabilities
         gpu_info = GPUMonitor.get_gpu_info()

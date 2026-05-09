@@ -40,11 +40,15 @@ import platform
 is_linux = platform.system() == "Linux"
 
 if is_linux:
-    linux_blender_path = WORKER_DIR / "blender-4.1.0-linux-x64" / "blender"
-    if linux_blender_path.exists():
-        BLENDER_DEFAULT = str(linux_blender_path)
+    # Search both the worker folder and the root project folder for the extracted Blender
+    path_worker = WORKER_DIR / "blender-4.1.0-linux-x64" / "blender"
+    path_root = PROJECT_ROOT / "blender-4.1.0-linux-x64" / "blender"
+    
+    if path_worker.exists():
+        BLENDER_DEFAULT = str(path_worker.resolve())
+    elif path_root.exists():
+        BLENDER_DEFAULT = str(path_root.resolve())
     else:
-        # Fallback to system-level blender if running locally on Linux without the package
         BLENDER_DEFAULT = "blender"
 else:
     if getattr(sys, 'frozen', False):
@@ -61,9 +65,10 @@ else:
 
 BLENDER_PATH = os.getenv("BLENDER_PATH", BLENDER_DEFAULT)
 
-# Safety check: If .env was copied from a Windows machine to Linux, actively ignore the C:/ drive path
-if is_linux and (BLENDER_PATH.startswith("C:") or BLENDER_PATH.startswith("D:")):
-    BLENDER_PATH = BLENDER_DEFAULT
+# Safety check: On Linux, force-override if the .env path is relative or Windows-based
+if is_linux:
+    if not BLENDER_PATH.startswith("/") or BLENDER_PATH.startswith("C:") or BLENDER_PATH.startswith("D:"):
+        BLENDER_PATH = BLENDER_DEFAULT
 
 # Performance & Polling config
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "10"))
