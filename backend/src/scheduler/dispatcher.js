@@ -367,6 +367,11 @@ class Dispatcher {
 
     logger.info(`[Dispatcher] Standard Job ${jobId} completed by ${workerAddress}. Result CID: ${resultCid}`);
 
+    // Extract statically in background asynchronously to prevent event blocking
+    setTimeout(() => {
+      this.extractJobFramesStatically(jobId, resultCid, job.encryptionKey);
+    }, 100);
+
     // Trigger on-chain escrow release
     const BlockchainManager = require('../blockchain/blockchain');
     const txHash = await BlockchainManager.logRelease(jobId, workerAddress, job.rewardEth || 0, resultCid);
@@ -507,7 +512,10 @@ class Dispatcher {
       }
 
       const masterDecryptedZipPath = path.join(tempDir, 'master_decrypted.zip');
-      
+      const publicJobDir = path.join(config.EXPORTS_DIR, parentJob.id);
+      fs.mkdirSync(publicJobDir, { recursive: true });
+      const publicFrameFiles = [];
+
       await new Promise((resolve, reject) => {
         const output = fs.createWriteStream(masterDecryptedZipPath);
         const archive = new ZipArchive({ zlib: { level: 9 } });
@@ -525,6 +533,10 @@ class Dispatcher {
               totalExtractedFiles++;
               const uniqueName = `seg_${i}_${f}`;
               archive.file(path.join(segmentFramesFolder, f), { name: uniqueName });
+              
+              // Copy to public exports dir for direct fast serving
+              fs.copyFileSync(path.join(segmentFramesFolder, f), path.join(publicJobDir, uniqueName));
+              publicFrameFiles.push(uniqueName);
             }
           }
         }
@@ -556,7 +568,9 @@ class Dispatcher {
       logger.info(`[Dispatcher] Multi-node frame assembly complete. Final Consolidated CID: ${masterCid}`);
 
       // Finalize Parent Job status
+      publicFrameFiles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
       JobStore.markDone(parentJob.id, masterCid);
+      JobStore.updateJob(parentJob.id, { publicFrames: publicFrameFiles });
 
       // Release escrow rewards to each child job's worker on-chain (using the child job details)
       const BlockchainManager = require('../blockchain/blockchain');
@@ -595,6 +609,51 @@ class Dispatcher {
       } catch (cleanErr) {
         logger.error(`[Dispatcher] Clean up error in tempDir ${tempDir}: ${cleanErr.message}`);
       }
+    }
+  }
+  /**
+   * Helper to download, decrypt, and statically extract frames for a single node completion
+   */
+  async extractJobFramesStatically(jobId, resultCid, encryptionKey) {
+    const tempDir = path.join(config.UPLOAD_DIR, `extract_${jobId}`);
+    logger.info(`[Dispatcher] Starting background static frame extraction for single-node Job ${jobId}`);
+    try {
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      const zipEncPath = path.join(tempDir, 'result.zip.enc');
+      const zipDecPath = path.join(tempDir, 'result.zip');
+      
+      // Download
+      await this._downloadFromIpfs(resultCid, zipEncPath, 90000);
+      
+      // Decrypt
+      const ok = EncryptionManager.decryptFile(zipEncPath, zipDecPath, encryptionKey);
+      if (!ok) throw new Error('Failed to decrypt single-node archive');
+      
+      // Unzip using AdmZip
+      const zip = new AdmZip(zipDecPath);
+      const publicJobDir = path.join(config.EXPORTS_DIR, jobId);
+      fs.mkdirSync(publicJobDir, { recursive: true });
+      zip.extractAllTo(publicJobDir, true);
+      
+      // Read extracted files
+      const files = fs.readdirSync(publicJobDir).filter(f => f.toLowerCase().endsWith('.png') || f.toLowerCase().endsWith('.jpg') || f.toLowerCase().endsWith('.jpeg'));
+      files.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+      
+      JobStore.updateJob(jobId, { publicFrames: files });
+      
+      // Broadcast updated jobs list
+      this.io.emit('jobs:list', JobStore.getAllJobs().slice(0, 20));
+      logger.info(`[Dispatcher] Successfully extracted ${files.length} frames statically for single-node Job ${jobId}`);
+    } catch (err) {
+      logger.error(`[Dispatcher] Background static frame extraction failed for Job ${jobId}: ${err.message}`);
+    } finally {
+      try {
+        if (fs.existsSync(tempDir)) {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+      } catch (e) {}
     }
   }
 }

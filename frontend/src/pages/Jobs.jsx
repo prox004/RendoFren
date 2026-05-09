@@ -32,6 +32,9 @@ function JobCard({ job }) {
   const [loadingFrames, setLoadingFrames] = useState(false)
   const [previewActive, setPreviewActive] = useState(false)
   const [activeFrameIdx, setActiveFrameIdx] = useState(0)
+  const [exportingVideo, setExportingVideo] = useState(false)
+  const [videoFps, setVideoFps] = useState(24)
+  const [exportProgress, setExportProgress] = useState(0)
 
   useEffect(() => {
     return () => {
@@ -41,10 +44,96 @@ function JobCard({ job }) {
     }
   }, [frameImages])
 
+  const exportAsVideo = async () => {
+    if (frameImages.length === 0) return
+    setExportingVideo(true)
+    setExportProgress(0)
+    
+    try {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      
+      const firstImg = await new Promise((resolve, reject) => {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.src = frameImages[0].url
+        img.onload = () => resolve(img)
+        img.onerror = reject
+      })
+      
+      canvas.width = firstImg.width || 1280
+      canvas.height = firstImg.height || 720
+      
+      const stream = canvas.captureStream(videoFps)
+      let options = { mimeType: 'video/webm;codecs=vp9' }
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'video/webm;codecs=vp8' }
+      }
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'video/webm' }
+      }
+      
+      const recorder = new MediaRecorder(stream, options)
+      const chunks = []
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data)
+      }
+      
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = `render_video_${job.id.slice(0, 8)}.webm`
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url)
+        setExportingVideo(false)
+      }
+      
+      recorder.start()
+      
+      for (let i = 0; i < frameImages.length; i++) {
+        setExportProgress(Math.floor((i / frameImages.length) * 100))
+        await new Promise((resolve) => {
+          const img = new Image()
+          img.crossOrigin = 'anonymous'
+          img.src = frameImages[i].url
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+            try {
+              stream.getVideoTracks()[0].requestFrame()
+            } catch (e) {}
+            setTimeout(resolve, 1000 / videoFps)
+          }
+          img.onerror = () => {
+            console.warn(`Failed to load frame ${i} for video export`)
+            resolve()
+          }
+        })
+      }
+      
+      setTimeout(() => { recorder.stop() }, 500)
+    } catch (err) {
+      console.error("Video export error:", err)
+      alert(`Failed to export video: ${err.message}`)
+      setExportingVideo(false)
+    }
+  }
+
   const loadFramePreviews = async () => {
     setLoadingFrames(true)
     setDecryptError(null)
     try {
+      // If backend has statically pre-extracted and decrypted frames, load them directly instantly!
+      if (job.publicFrames && job.publicFrames.length > 0) {
+        const imageFiles = job.publicFrames.map(filename => ({
+          name: filename,
+          url: `${BACKEND_URL}/exports/${job.id}/${filename}`
+        }))
+        setFrameImages(imageFiles)
+        setActiveFrameIdx(0)
+        setPreviewActive(true)
+        return
+      }
+
       const url = `${BACKEND_URL}/api/jobs/download/${job.resultCid}`
       const response = await fetch(url, {
         headers: {
@@ -249,6 +338,52 @@ function JobCard({ job }) {
                 className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.05] hover:border-[var(--neon-cyan)] text-white hover:text-[var(--neon-cyan)] transition-all cursor-pointer font-bold text-xs"
               >
                 NEXT ▶
+              </button>
+            </div>
+          </div>
+
+          {/* Cinematic Video Export Tool */}
+          <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-slate-900/40 border border-white/[0.03] text-xs">
+            <div className="flex items-center gap-3">
+              <Layers className="w-4 h-4 text-[var(--neon-pink)] animate-pulse" />
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-cyber">Compile Sequence to Video</span>
+                <span className="text-[11px] text-slate-500 font-medium mt-0.5">Hardware-accelerated client-side compilation</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-white/[0.05]">
+                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider font-cyber">FPS:</span>
+                <select 
+                  value={videoFps} 
+                  onChange={(e) => setVideoFps(parseInt(e.target.value))}
+                  className="bg-transparent border-none text-white font-extrabold outline-none cursor-pointer text-xs"
+                  disabled={exportingVideo}
+                >
+                  <option value={12} className="bg-slate-950 text-white">12 FPS</option>
+                  <option value={24} className="bg-slate-950 text-white">24 FPS (Cinematic)</option>
+                  <option value={30} className="bg-slate-950 text-white">30 FPS (Standard)</option>
+                  <option value={60} className="bg-slate-950 text-white">60 FPS (Ultra Smooth)</option>
+                </select>
+              </div>
+
+              <button
+                onClick={exportAsVideo}
+                disabled={exportingVideo}
+                className="btn-cyber btn-cyber-pink py-2 px-4 text-[10px] font-cyber flex items-center gap-2 cursor-pointer"
+              >
+                {exportingVideo ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    COMPILING ({exportProgress}%)
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5" />
+                    EXPORT WEB VIDEO
+                  </>
+                )}
               </button>
             </div>
           </div>
