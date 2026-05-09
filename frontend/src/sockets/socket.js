@@ -9,6 +9,9 @@ export const socket = io(BACKEND, {
   autoConnect: true,
   reconnection: true,
   reconnectionDelay: 2000,
+  extraHeaders: {
+    "ngrok-skip-browser-warning": "true"
+  }
 })
 
 export default socket

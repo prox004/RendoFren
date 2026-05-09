@@ -6,7 +6,10 @@ export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost
 const api = axios.create({
   baseURL: `${BACKEND_URL}/api`,
   timeout: 30000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true'
+  },
 })
 
 export const getNetworkStats   = () => api.get('/network/stats').then(r => r.data)
@@ -25,7 +28,10 @@ export const generateApiKey = (payload) => api.post('/auth/generate-key', payloa
 
 export const uploadBlend = (formData, onProgress) =>
   axios.post(`${BACKEND_URL}/api/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: { 
+      'Content-Type': 'multipart/form-data',
+      'ngrok-skip-browser-warning': 'true'
+    },
     onUploadProgress: (e) => onProgress && onProgress(Math.round((e.loaded / e.total) * 100)),
     timeout: 300000,
   }).then(r => r.data)

@@ -204,15 +204,17 @@
       "0x3bda74e0f806a7910685a6baf2f58af7e5163527",
       {
         "address": "0x3bda74e0f806a7910685a6baf2f58af7e5163527",
-        "gpuName": "GeForce GTX 1050",
-        "vram": 3,
-        "benchmarkScore": 180,
-        "status": "offline",
+        "gpuName": "Tesla T4",
+        "vram": 15,
+        "benchmarkScore": 1472,
+        "status": "idle",
         "currentJobId": "0b5773e2-3386-43b8-ba00-f5618aa2b228",
         "completedJobs": 0,
         "totalEarnings": 0,
-        "lastSeen": "2026-05-08T09:25:15.614Z",
-        "registeredAt": "2026-05-08T09:25:10.689Z"
+        "lastSeen": "2026-05-09T07:37:02.800Z",
+        "registeredAt": "2026-05-08T09:25:10.689Z",
+        "usage": 0,
+        "temperature": 24
       }
     ],
     [
@@ -236,13 +238,15 @@
         "address": "0x24705555a3d1d17741d75eFA6173ef8B8b2ed68d",
         "gpuName": "GeForce GTX 1050",
         "vram": 3,
-        "benchmarkScore": 180,
+        "benchmarkScore": 185,
         "status": "idle",
         "currentJobId": null,
         "completedJobs": 0,
         "totalEarnings": 0,
-        "lastSeen": "2026-05-08T18:23:27.996Z",
-        "registeredAt": "2026-05-08T18:23:27.996Z"
+        "lastSeen": "2026-05-09T07:37:01.287Z",
+        "registeredAt": "2026-05-08T18:23:27.996Z",
+        "usage": 0.03705559455446428,
+        "temperature": 57.89063034044035
       }
     ]
   ]
