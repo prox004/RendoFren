@@ -49,7 +49,16 @@ class GPUMonitor:
                 pass
                 
         # Setup process creation flags to suppress background console windows on Windows
-        cls._has_nvidia_smi = shutil.which("nvidia-smi") is not None
+        nvidia_smi_path = shutil.which("nvidia-smi")
+        if not nvidia_smi_path and os.path.exists("/usr/bin/nvidia-smi"):
+            nvidia_smi_path = "/usr/bin/nvidia-smi"
+        if not nvidia_smi_path and os.path.exists("/usr/local/nvidia/bin/nvidia-smi"):
+            nvidia_smi_path = "/usr/local/nvidia/bin/nvidia-smi"
+            
+        cls._has_nvidia_smi = nvidia_smi_path is not None
+        cls._nvidia_smi_path = nvidia_smi_path or "nvidia-smi"
+        
+        cls._has_wmic = shutil.which("wmic") is not None and os.name == 'nt'
         cls._has_wmic = shutil.which("wmic") is not None and os.name == 'nt'
         
         # Build safe subprocess kwargs based on OS
@@ -63,7 +72,7 @@ class GPUMonitor:
         # 2. Check with nvidia-smi once
         if cls._has_nvidia_smi:
             try:
-                cmd = ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"]
+                cmd = [cls._nvidia_smi_path, "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"]
                 result = subprocess.run(cmd, **cls._subp_kwargs)
                 if result.returncode == 0 and result.stdout.strip():
                     parts = [p.strip() for p in result.stdout.split(',')]
@@ -141,7 +150,7 @@ class GPUMonitor:
         # 2. Use nvidia-smi CLI fallback
         if cls._has_nvidia_smi:
             try:
-                cmd = ["nvidia-smi", "--query-gpu=memory.used,utilization.gpu,temperature.gpu", "--format=csv,noheader,nounits"]
+                cmd = [cls._nvidia_smi_path, "--query-gpu=memory.used,utilization.gpu,temperature.gpu", "--format=csv,noheader,nounits"]
                 result = subprocess.run(cmd, **cls._subp_kwargs)
                 if result.returncode == 0 and result.stdout.strip():
                     parts = [p.strip() for p in result.stdout.split(',')]
