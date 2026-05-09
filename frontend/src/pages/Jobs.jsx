@@ -55,10 +55,15 @@ function JobCard({ job }) {
       
       const firstImg = await new Promise((resolve, reject) => {
         const img = new Image()
-        img.crossOrigin = 'anonymous'
-        img.src = frameImages[0].url
+        const isBlob = frameImages[0].url.startsWith('blob:')
+        if (!isBlob) {
+          img.crossOrigin = 'anonymous'
+          img.src = `${frameImages[0].url}?cors=1`
+        } else {
+          img.src = frameImages[0].url
+        }
         img.onload = () => resolve(img)
-        img.onerror = reject
+        img.onerror = (e) => reject(new Error(`Failed to load frame 0: ${frameImages[0].name}`))
       })
       
       canvas.width = firstImg.width || 1280
@@ -94,8 +99,13 @@ function JobCard({ job }) {
         setExportProgress(Math.floor((i / frameImages.length) * 100))
         await new Promise((resolve) => {
           const img = new Image()
-          img.crossOrigin = 'anonymous'
-          img.src = frameImages[i].url
+          const isBlob = frameImages[i].url.startsWith('blob:')
+          if (!isBlob) {
+            img.crossOrigin = 'anonymous'
+            img.src = `${frameImages[i].url}?cors=1`
+          } else {
+            img.src = frameImages[i].url
+          }
           img.onload = () => {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
             try {

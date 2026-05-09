@@ -46,8 +46,20 @@ fs.mkdirSync(config.RENDERS_DIR, { recursive: true });
 fs.mkdirSync(config.UPLOAD_DIR, { recursive: true });
 fs.mkdirSync(path.join(__dirname, '../logs'), { recursive: true });
 
-app.use('/exports', express.static(config.EXPORTS_DIR));
-app.use('/renders', express.static(config.RENDERS_DIR));
+app.use('/exports', express.static(config.EXPORTS_DIR, {
+  setHeaders: (res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, ngrok-skip-browser-warning');
+  }
+}));
+app.use('/renders', express.static(config.RENDERS_DIR, {
+  setHeaders: (res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, ngrok-skip-browser-warning');
+  }
+}));
 
 // ── API Routes ────────────────────────────────────────────────────────
 app.use('/api/upload', uploadRouter);
