@@ -499,6 +499,7 @@ class Dispatcher {
         logger.info(`[Dispatcher] Extracting segment ${i} PNG frames...`);
         const zip = new AdmZip(segmentZipDecPath);
         zip.extractAllTo(segmentFramesFolder, true);
+      }
 
       const masterDecryptedZipPath = path.join(tempDir, 'master_decrypted.zip');
       
