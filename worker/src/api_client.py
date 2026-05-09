@@ -76,7 +76,7 @@ class WorkerAPIClient:
         self.ui_logger(f"[Network] {msg}")
 
     # ─────────────────────────── Registration ──────────────────────────
-    def register_or_authenticate(self) -> bool:
+    def register_or_authenticate(self, register: bool = True) -> bool:
         """
         Register this worker with the backend.
         Uses /api/workers/register (HTTP POST).
@@ -98,6 +98,10 @@ class WorkerAPIClient:
                     self.worker_address = user_addr
                 self.log(f"Authenticated as: {self.account_info.get('email', 'Unknown User')} ({self.worker_address})")
                 self.log(f"Status: {'VIEW-ONLY (API Managed)' if not FORCE_LOCAL_ADDRESS else 'FORCE LOCAL WALLET ACTIVE'}")
+                
+                # If we only want to validate credentials, return early without registering the worker node
+                if not register:
+                    return True
             else:
                 self.log(f"API Key authentication failed (HTTP {resp.status_code}). Blocked from joining network.")
                 return False

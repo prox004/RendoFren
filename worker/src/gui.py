@@ -387,7 +387,7 @@ class RendoFrenWorkerApp(QMainWindow):
 
     def check_startup_auth(self):
         """Validates API key and updates UI with account details if available"""
-        if self.api_client.register_or_authenticate():
+        if self.api_client.register_or_authenticate(register=False):
             if self.api_client.account_info:
                 email = self.api_client.account_info.get('email', 'N/A')
                 addr = self.api_client.account_info.get('address', 'N/A')
