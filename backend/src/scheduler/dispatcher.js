@@ -450,10 +450,9 @@ class Dispatcher {
       }
 
       const segments = parentJob.segments || [];
-      const decryptedFramesFolder = path.join(tempDir, 'frames');
-      if (!fs.existsSync(decryptedFramesFolder)) {
-        fs.mkdirSync(decryptedFramesFolder, { recursive: true });
-      }
+
+      const masterZip = new AdmZip();
+      let totalExtractedFiles = 0;
 
       for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
@@ -486,25 +485,30 @@ class Dispatcher {
           throw new Error(`Failed to decrypt segment ${i}`);
         }
 
+        const segmentFramesFolder = path.join(tempDir, `frames_seg_${i}`);
+        fs.mkdirSync(segmentFramesFolder, { recursive: true });
+
         // Extract PNGs using adm-zip
         logger.info(`[Dispatcher] Extracting segment ${i} PNG frames...`);
         const zip = new AdmZip(segmentZipDecPath);
-        zip.extractAllTo(decryptedFramesFolder, true);
+        zip.extractAllTo(segmentFramesFolder, true);
+
+        // Collect all extracted png files for this segment
+        const files = fs.readdirSync(segmentFramesFolder).filter(f => f.toLowerCase().endsWith('.png') || f.toLowerCase().endsWith('.jpg') || f.toLowerCase().endsWith('.jpeg'));
+        
+        for (const f of files) {
+          totalExtractedFiles++;
+          // Ensure uniqueness by prefixing the filename with segment index
+          const uniqueName = `seg_${i}_${f}`;
+          masterZip.addLocalFile(path.join(segmentFramesFolder, f), "", uniqueName);
+        }
       }
 
-      // Collect all extracted png files
-      const files = fs.readdirSync(decryptedFramesFolder).filter(f => f.toLowerCase().endsWith('.png'));
-      if (files.length === 0) {
+      if (totalExtractedFiles === 0) {
         throw new Error('No frame images found in decrypted segments!');
       }
 
-      logger.info(`[Dispatcher] Successfully unzipped ${files.length} frames total. Packing master zip...`);
-
-      // Zip all frames back together
-      const masterZip = new AdmZip();
-      for (const f of files) {
-        masterZip.addLocalFile(path.join(decryptedFramesFolder, f));
-      }
+      logger.info(`[Dispatcher] Successfully unzipped ${totalExtractedFiles} frames total. Packing master zip...`);
       
       const masterDecryptedZipPath = path.join(tempDir, 'master_decrypted.zip');
       masterZip.writeZip(masterDecryptedZipPath);
